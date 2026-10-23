@@ -1,4 +1,4 @@
-# study-snn
+# spike-engine
 
 SNN에 대해서 배우기 위해서 이 엔진을 개발한다.  
 SNN 모델을 학습과 추론을 진행할 수 있어야 한다.  
@@ -46,16 +46,16 @@ SNN 모델을 만드는 것이 간단해야 한다.
 
   Pre-뉴런의 스파이크를 Post-뉴런의 입력 전류로 변환하여 전달합니다. 학습 기능은 갖지 않고 순수 가중치 및 전달만 처리합니다.
 
-  [ ] 시냅스 베이스 인터페이스 (synapse.hpp):  
+  [o] 시냅스 베이스 인터페이스 (synapse.hpp):  
       • forward(const FloatBuffer& pre_spikes, FloatBuffer& post_current)  
       • 가중치 읽기/쓰기 인터페이스 (get_weights(), set_weights()).  
-  [ ] 완전 연결 시냅스 (dense_synapse.hpp):  
+  [o] 완전 연결 시냅스 (dense_synapse.hpp):  
       • 1차원 평탄화된 가중치 행렬 (M × N).  
       • Pre 뉴런이 발화한 경우 해당 가중치 행을 Post 전류 버퍼에 연속 메모리 벡터 덧셈.  
-  [ ] 희소 연결 시냅스 (sparse_synapse.hpp):  
+  [o] 희소 연결 시냅스 (sparse_synapse.hpp):  
       • 비어있는 0 연산 제거를 위한 평탄화된 인덱스/가중치 리스트(Flat CSR/Adjacency Array).
       • 발화된 뉴런에 연결된 유효 Post 뉴런들에만 선택적 전류 누적.  
-  [ ] 가중치 초기화 유틸리티 (weight_init.hpp):  
+  [o] 가중치 초기화 유틸리티 (weight_init.hpp):  
       • Uniform, Normal, Xavier/He 등 기초 분포 초기화기.  
 
   ──────
@@ -74,7 +74,7 @@ SNN 모델을 만드는 것이 간단해야 한다.
 
   Network 외부에서 특정 Pre/Post 뉴런과 시냅스를 포인터로 참조하여 가중치를 갱신합니다.
 
-  [ ] 학습 규칙 베이스 인터페이스 (learning_rule.hpp):  
+  [ ] 학습 규칙 베이스 인터페이스 (learning.hpp):  
       • update(float reward = 0.0f)  
       • reset()  
   [ ] STDP (stdp.hpp):  

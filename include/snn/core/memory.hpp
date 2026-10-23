@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <new>
 #include <vector>
@@ -69,6 +70,18 @@ namespace snn
         bool operator!=(const AlignedAllocator<U, Alignment> &) const noexcept { return false; }
     };
 
+    using IndexBuffer = std::vector<std::size_t, AlignedAllocator<std::size_t, 64>>;
+
+    using U8Buffer = std::vector<uint8_t, AlignedAllocator<uint8_t, 64>>;
+    using U16Buffer = std::vector<uint16_t, AlignedAllocator<uint16_t, 64>>;
+    using U32Buffer = std::vector<uint32_t, AlignedAllocator<uint32_t, 64>>;
+    using U64Buffer = std::vector<uint64_t, AlignedAllocator<uint64_t, 64>>;
+
+    using I8Buffer = std::vector<int8_t, AlignedAllocator<int8_t, 64>>;
+    using I16Buffer = std::vector<int16_t, AlignedAllocator<int16_t, 64>>;
+    using I32Buffer = std::vector<int32_t, AlignedAllocator<int32_t, 64>>;
+    using I64Buffer = std::vector<int64_t, AlignedAllocator<int64_t, 64>>;
+
     using F32Buffer = std::vector<float, AlignedAllocator<float, 64>>;
-    using F64Buffer = std::vector<double, AlignedAllocator<float,64>>;
+    using F64Buffer = std::vector<double, AlignedAllocator<double, 64>>;
 }
