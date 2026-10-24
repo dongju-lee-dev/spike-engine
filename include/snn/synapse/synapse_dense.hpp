@@ -23,10 +23,10 @@ namespace snn
         {
         }
 
-        void step(const F32Buffer &spike_buffer, F32Buffer &buffer) override
+        void step(const F32Buffer &pre_spikes, F32Buffer &post_current) override
         {
-            float *SNN_RESTRICT buf_ptr = SNN_ASSUME_ALIGNED(buffer.data(), 64);
-            const float *SNN_RESTRICT spike_ptr = SNN_ASSUME_ALIGNED(spike_buffer.data(), 64);
+            float *SNN_RESTRICT buf_ptr = SNN_ASSUME_ALIGNED(post_current.data(), 64);
+            const float *SNN_RESTRICT spike_ptr = SNN_ASSUME_ALIGNED(pre_spikes.data(), 64);
             const float *SNN_RESTRICT w_ptr = SNN_ASSUME_ALIGNED(w_.data(), 64);
 
             const std::size_t n_pre = pre_;

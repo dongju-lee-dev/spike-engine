@@ -27,10 +27,10 @@ namespace snn
         {
         }
 
-        void step(const F32Buffer &spike_buffer, F32Buffer &buffer) override
+        void step(const F32Buffer &pre_spikes, F32Buffer &post_current) override
         {
-            float *SNN_RESTRICT buf_ptr = SNN_ASSUME_ALIGNED(buffer.data(), 64);
-            const float *SNN_RESTRICT spike_ptr = SNN_ASSUME_ALIGNED(spike_buffer.data(), 64);
+            float *SNN_RESTRICT buf_ptr = SNN_ASSUME_ALIGNED(post_current.data(), 64);
+            const float *SNN_RESTRICT spike_ptr = SNN_ASSUME_ALIGNED(pre_spikes.data(), 64);
             const float *SNN_RESTRICT w_ptr = SNN_ASSUME_ALIGNED(w_.data(), 64);
             const std::size_t *SNN_RESTRICT c_ptr = SNN_ASSUME_ALIGNED(c_.data(), 64);
             const std::size_t *SNN_RESTRICT i_ptr = SNN_ASSUME_ALIGNED(i_.data(), 64);
@@ -54,7 +54,6 @@ namespace snn
                             buf_ptr[row_dst[k]] += row_w[k];
                         }
                     }
-
                     offset += c_ptr[i];
                 }
             }
@@ -74,12 +73,20 @@ namespace snn
 #pragma clang loop unroll_count(8)
                     for (std::size_t k = 0; k < k_len; ++k)
                     {
-                        sum += row_w[k] * spike_buffer[row_dst[k]];
+                        sum += row_w[k] * spike_ptr[row_dst[k]];
                     }
 
                     buf_ptr[j] += sum;
+                    offset += c_ptr[j];
                 }
             }
         }
+
+        [[nodiscard]] SynapseMode mode() const noexcept override { return mode_; }
+        [[nodiscard]] std::size_t pre_size() const noexcept override { return pre_; }
+        [[nodiscard]] std::size_t post_size() const noexcept override { return post_; }
+
+        [[nodiscard]] F32Buffer &weights() noexcept override { return w_; }
+        [[nodiscard]] const F32Buffer &weights() const noexcept override { return w_; }
     };
 }

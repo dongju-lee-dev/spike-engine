@@ -10,7 +10,7 @@ namespace snn
     public:
         virtual ~Neuron() = default;
 
-        virtual void step(F32Buffer& buffer) = 0;
+        virtual void step(const F32Buffer &current_in, F32Buffer &spike_out) = 0;
         virtual void reset() = 0;
 
         [[nodiscard]] virtual std::size_t size() const noexcept = 0;

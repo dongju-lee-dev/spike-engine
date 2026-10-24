@@ -25,9 +25,10 @@ namespace snn
         {
         }
 
-        void step(F32Buffer &buffer) override
+        void step(const F32Buffer &current_in, F32Buffer &spike_out) override
         {
-            float *SNN_RESTRICT buf_ptr = SNN_ASSUME_ALIGNED(buffer.data(), 64);
+            const float *SNN_RESTRICT cur_ptr = SNN_ASSUME_ALIGNED(current_in.data(), 64);
+            float *SNN_RESTRICT spk_ptr = SNN_ASSUME_ALIGNED(spike_out.data(), 64);
             float *SNN_RESTRICT v_ptr = SNN_ASSUME_ALIGNED(v_.data(), 64);
 
             const std::size_t len = v_.size();
@@ -35,14 +36,13 @@ namespace snn
             const float v_reset = cfg_.v_reset;
             const float decay = cfg_.decay;
 
-#pragma omp simd aligned(buf_ptr, v_ptr : 64)
+#pragma omp simd aligned(cur_ptr, spk_ptr, v_ptr : 64)
             for (std::size_t i = 0; i < len; ++i)
             {
-                float v = decay * v_ptr[i] + buf_ptr[i];
-
+                float v = decay * v_ptr[i] + cur_ptr[i];
                 bool f = (v >= v_th);
 
-                buf_ptr[i] = f ? 1.0f : 0.0f;
+                spk_ptr[i] = f ? 1.0f : 0.0f;
                 v_ptr[i] = f ? v_reset : v;
             }
         }

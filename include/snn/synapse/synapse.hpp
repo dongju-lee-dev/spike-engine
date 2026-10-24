@@ -16,7 +16,7 @@ namespace snn
     public:
         virtual ~Synapse() = default;
 
-        virtual void step(const F32Buffer &spike_buffer, F32Buffer &buffer) = 0;
+        virtual void step(const F32Buffer &pre_spikes, F32Buffer &post_current) = 0;
 
         [[nodiscard]] virtual SynapseMode mode() const noexcept = 0;
         [[nodiscard]] virtual std::size_t pre_size() const noexcept = 0;

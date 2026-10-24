@@ -14,7 +14,7 @@ SNN 모델을 만드는 것이 간단해야 한다.
       • 기본 버퍼 타입 정의 (using FloatBuffer = std::vector<float, AlignedAllocator<float, 64>>;).  
   [o] 컴파일러 힌트 매크로 (compiler.hpp):  
       • Clang/GCC 호환 RESTRICT (__restrict__), 메모리 정렬 힌트(ASSUME_ALIGNED) 매크로.  
-  [ ] 인코더/디코더 (encoder.hpp, decoder.hpp):  
+  [o] 인코더/디코더 (encoder.hpp, decoder.hpp):  
       • Poisson Rate Encoder: 실수값([0.0, 1.0])을 확률적 스파이크(0.0f / 1.0f)로 실시간 변환.
       • Direct/Current Encoder: 실수값을 입력 전류 벡터로 직접 주입.  
       • Spike Rate Decoder: 출력 뉴런들의 누적 스파이크 횟수 집계 및 최대 발화 클래스 판별.  
@@ -63,7 +63,7 @@ SNN 모델을 만드는 것이 간단해야 한다.
 
   뉴런 군집들과 시냅스들을 등록하고, 연결 관계에 따라 1틱 동안 전방향(Forward) 추론을 수행합니다.
 
-  [ ] 네트워크 컨테이너 (network.hpp):  
+  [o] 네트워크 컨테이너 (network.hpp):  
       • add_population<NeuronType>(size, config): 뉴런 군집 생성 및 추가.  
       • connect(pre_idx, post_idx, synapse_type, init_cfg): 뉴런 군집 간 시냅스 생성 및 연결.  
       • step(const FloatBuffer& input): 전체 뉴런/시냅스를 순회하며 추론 1틱 실행 (중간 버퍼 핑퐁 재사용).  
@@ -74,7 +74,7 @@ SNN 모델을 만드는 것이 간단해야 한다.
 
   Network 외부에서 특정 Pre/Post 뉴런과 시냅스를 포인터로 참조하여 가중치를 갱신합니다.
 
-  [ ] 학습 규칙 베이스 인터페이스 (learning.hpp):  
+  [o] 학습 규칙 베이스 인터페이스 (learning.hpp):  
       • update(float reward = 0.0f)  
       • reset()  
   [ ] STDP (stdp.hpp):  
