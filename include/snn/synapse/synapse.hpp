@@ -5,20 +5,13 @@
 
 namespace snn
 {
-    enum class SynapseMode
-    {
-        Front,
-        Back
-    };
-
     class Synapse
     {
     public:
         virtual ~Synapse() = default;
 
-        virtual void step(const F32Buffer &pre_spikes, F32Buffer &post_current) = 0;
+        virtual void step(const BitBuffer &spike, F32Buffer &current) = 0;
 
-        [[nodiscard]] virtual SynapseMode mode() const noexcept = 0;
         [[nodiscard]] virtual std::size_t pre_size() const noexcept = 0;
         [[nodiscard]] virtual std::size_t post_size() const noexcept = 0;
 

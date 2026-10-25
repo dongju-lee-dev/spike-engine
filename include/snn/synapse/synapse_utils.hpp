@@ -42,8 +42,8 @@ namespace snn
 
     inline void connect_uniform_ratio(SparseSynapse &syn, float ratio)
     {
-        const std::size_t nf = (syn.mode() == SynapseMode::Front) ? syn.pre_size() : syn.post_size();
-        const std::size_t nb = (syn.mode() == SynapseMode::Front) ? syn.post_size() : syn.pre_size();
+        const std::size_t nf = syn.pre_size();
+        const std::size_t nb = syn.pre_size();
         const std::size_t k = std::clamp(static_cast<std::size_t>(std::round(nf * ratio)), std::size_t{1}, nf);
 
         syn.c_.clear();
@@ -73,8 +73,8 @@ namespace snn
 
     inline void connect_random_ratio(SparseSynapse &syn, float ratio, std::mt19937::result_type seed = 42)
     {
-        const std::size_t nf = (syn.mode() == SynapseMode::Front) ? syn.pre_size() : syn.post_size();
-        const std::size_t nb = (syn.mode() == SynapseMode::Front) ? syn.post_size() : syn.pre_size();
+        const std::size_t nf = syn.pre_size();
+        const std::size_t nb = syn.pre_size();
         const std::size_t k = std::clamp(static_cast<std::size_t>(std::round(nb * ratio)), std::size_t{1}, nb);
 
         syn.c_.clear();
@@ -112,8 +112,8 @@ namespace snn
 
     inline void connect_random(SparseSynapse &syn, std::mt19937::result_type seed = 42)
     {
-        const std::size_t nf = (syn.mode() == SynapseMode::Front) ? syn.pre_size() : syn.post_size();
-        const std::size_t nb = (syn.mode() == SynapseMode::Front) ? syn.post_size() : syn.pre_size();
+        const std::size_t nf = syn.pre_size();
+        const std::size_t nb = syn.pre_size();
 
         syn.c_.clear();
         syn.i_.clear();
@@ -153,8 +153,8 @@ namespace snn
 
     inline void connect_gaussian(SparseSynapse &syn, float sigma, float ratio = 0.3f, std::mt19937::result_type seed = 42)
     {
-        const std::size_t n_src = (syn.mode() == SynapseMode::Front) ? syn.pre_size() : syn.post_size();
-        const std::size_t n_pool = (syn.mode() == SynapseMode::Front) ? syn.post_size() : syn.pre_size();
+        const std::size_t n_src = syn.pre_size();
+        const std::size_t n_pool = syn.pre_size();
         const std::size_t k = std::clamp(static_cast<std::size_t>(std::round(n_pool * ratio)), std::size_t{1}, n_pool);
 
         syn.c_.clear();

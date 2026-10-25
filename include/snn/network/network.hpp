@@ -17,8 +17,8 @@ namespace snn
         struct NeuronBox
         {
             std::unique_ptr<Neuron> neu;
-            F32Buffer current_in;
-            F32Buffer spike_out;
+            F32Buffer current;
+            BitBuffer spike;
         };
 
         struct SynapseBox
@@ -38,8 +38,8 @@ namespace snn
             const std::size_t sz = neuron->size();
             neu_.push_back(NeuronBox{
                 .neu = std::move(neuron),
-                .current_in = F32Buffer(sz, 0.0f),
-                .spike_out = F32Buffer(sz, 0.0f),
+                .current = F32Buffer(sz, 0.0f),
+                .spike = BitBuffer(sz, false),
             });
             return neu_.size() - 1;
         }
@@ -77,13 +77,14 @@ namespace snn
             }
         }
 
-        void step(const F32Buffer &input, F32Buffer &output)
+        void step(const F32Buffer &input, BitBuffer &output)
         {
             if (!input.empty())
             {
-                float *SNN_RESTRICT cur_ptr = neu_[0].current_in.data();
+                float *SNN_RESTRICT cur_ptr = neu_[0].current.data();
                 const float *SNN_RESTRICT in_ptr = input.data();
-                const std::size_t len = std::min(neu_[0].current_in.size(), input.size());
+                const std::size_t len = std::min(neu_[0].current.size(), input.size());
+
 #pragma omp simd aligned(cur_ptr, in_ptr : 64)
                 for (std::size_t i = 0; i < len; ++i)
                 {
@@ -93,18 +94,18 @@ namespace snn
 
             for (auto &s : syn_)
             {
-                s.syn->step(neu_[s.pre_id].spike_out, neu_[s.post_id].current_in);
+                s.syn->step(neu_[s.pre_id].spike, neu_[s.post_id].current);
             }
 
             for (auto &n : neu_)
             {
-                n.neu->step(n.current_in, n.spike_out);
-                std::fill(n.current_in.begin(), n.current_in.end(), 0.0f);
+                n.neu->step(n.current, n.spike);
+                std::fill(n.current.begin(), n.current.end(), 0.0f);
             }
 
             if (!output.empty())
             {
-                std::copy(neu_.back().spike_out.begin(), neu_.back().spike_out.end(), output.begin());
+                output.copy_from(neu_.back().spike);
             }
         }
 

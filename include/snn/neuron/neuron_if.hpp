@@ -24,24 +24,49 @@ namespace snn
         {
         }
 
-        void step(const F32Buffer &current_in, F32Buffer &spike_out) override
+    private:
+        [[nodiscard]] inline std::uint64_t step_tile(
+            const std::size_t base_idx,
+            const std::size_t count,
+            const float *SNN_RESTRICT cur_ptr,
+            float *SNN_RESTRICT v_ptr) const noexcept
         {
-            const float *SNN_RESTRICT cur_ptr = SNN_ASSUME_ALIGNED(current_in.data(), 64);
-            float *SNN_RESTRICT spk_ptr = SNN_ASSUME_ALIGNED(spike_out.data(), 64);
-            float *SNN_RESTRICT v_ptr = SNN_ASSUME_ALIGNED(v_.data(), 64);
-
-            const std::size_t len = v_.size();
+            std::uint64_t spike_word = 0ULL;
             const float v_th = cfg_.v_threshold;
             const float v_reset = cfg_.v_reset;
 
-#pragma omp simd aligned(buf_ptr, v_ptr : 64)
-            for (std::size_t i = 0; i < len; ++i)
+#pragma omp simd aligned(cur_ptr, v_ptr : 64) reduction(| : spike_word)
+            for (std::size_t b = 0; b < count; ++b)
             {
-                float v = v_ptr[i] + cur_ptr[i];
+                const std::size_t idx = base_idx + b;
+                float v = v_ptr[idx] + cur_ptr[idx];
                 bool f = (v >= v_th);
 
-                spk_ptr[i] = f ? 1.0f : 0.0f;
-                v_ptr[i] = f ? v_reset : v;
+                spike_word |= (static_cast<std::uint64_t>(f) << b);
+                v_ptr[idx] = f ? v_reset : v;
+            }
+
+            return spike_word;
+        }
+
+    public:
+        void step(const F32Buffer &current, BitBuffer &spike) override
+        {
+            float *SNN_RESTRICT v_ptr = SNN_ASSUME_ALIGNED(v_.data(), 64);
+            const float *SNN_RESTRICT cur_ptr = SNN_ASSUME_ALIGNED(current.data(), 64);
+
+            const std::size_t len = v_.size();
+            const std::size_t full_word = len / 64;
+            const std::size_t remainder = len % 64;
+
+            for (std::size_t w = 0; w < full_word; ++w)
+            {
+                spike.set_word(w, step_tile(w * 64, 64, cur_ptr, v_ptr));
+            }
+
+            if (remainder > 0)
+            {
+                spike.set_word(full_word, step_tile(full_word * 64, remainder, cur_ptr, v_ptr));
             }
         }
 

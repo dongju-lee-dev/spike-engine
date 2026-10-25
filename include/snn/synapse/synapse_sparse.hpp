@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstddef>
-#include "snn/core/compiler.hpp"
 #include "snn/core/memory.hpp"
 #include "snn/synapse/synapse.hpp"
 
@@ -10,16 +9,14 @@ namespace snn
     class SparseSynapse : public Synapse
     {
     public:
-        SynapseMode mode_;
         std::size_t pre_;
         std::size_t post_;
         IndexBuffer c_;
         IndexBuffer i_;
         F32Buffer w_;
 
-        explicit SparseSynapse(SynapseMode mode, std::size_t pre, std::size_t post)
-            : mode_(mode),
-              pre_(pre),
+        explicit SparseSynapse(std::size_t pre, std::size_t post)
+            : pre_(pre),
               post_(post),
               c_(0),
               i_(0),
@@ -27,62 +24,33 @@ namespace snn
         {
         }
 
-        void step(const F32Buffer &pre_spikes, F32Buffer &post_current) override
+        void step(const BitBuffer &spike, F32Buffer &current) override
         {
-            float *SNN_RESTRICT buf_ptr = SNN_ASSUME_ALIGNED(post_current.data(), 64);
-            const float *SNN_RESTRICT spike_ptr = SNN_ASSUME_ALIGNED(pre_spikes.data(), 64);
-            const float *SNN_RESTRICT w_ptr = SNN_ASSUME_ALIGNED(w_.data(), 64);
+            float *SNN_RESTRICT cur_ptr = SNN_ASSUME_ALIGNED(current.data(), 64);
             const std::size_t *SNN_RESTRICT c_ptr = SNN_ASSUME_ALIGNED(c_.data(), 64);
             const std::size_t *SNN_RESTRICT i_ptr = SNN_ASSUME_ALIGNED(i_.data(), 64);
+            const float *SNN_RESTRICT w_ptr = SNN_ASSUME_ALIGNED(w_.data(), 64);
 
-            if (mode_ == SynapseMode::Front)
-            {
-                std::size_t offset = 0;
-                const std::size_t i_len = pre_;
+            std::size_t count = 0;
+            std::size_t ltidx = 0;
 
-                for (std::size_t i = 0; i < i_len; ++i)
-                {
-                    if (spike_ptr[i] > 0.0f)
-                    {
-                        const std::size_t k_len = c_ptr[i];
-                        const std::size_t *SNN_RESTRICT row_dst = i_ptr + offset;
-                        const float *SNN_RESTRICT row_w = w_ptr + offset;
+            spike.for_each_true([&](const std::size_t index)
+                                {
+                for (; ltidx < index; ++ltidx){
+                    count += c_ptr[ltidx];
+                }
+
+                const std::size_t c = c_ptr[ltidx];
+                const std::size_t *SNN_RESTRICT row_i = count + i_ptr;
+                const float *SNN_RESTRICT row_w = count + w_ptr;
 
 #pragma clang loop unroll_count(8)
-                        for (std::size_t k = 0; k < k_len; ++k)
-                        {
-                            buf_ptr[row_dst[k]] += row_w[k];
-                        }
-                    }
-                    offset += c_ptr[i];
-                }
-            }
-            else
-            {
-                std::size_t offset = 0;
-                const std::size_t j_len = post_;
-
-                for (std::size_t j = 0; j < j_len; ++j)
+                for (std::size_t i = 0; i < c; ++i)
                 {
-                    const std::size_t k_len = c_ptr[j];
-                    const std::size_t *SNN_RESTRICT row_dst = i_ptr + offset;
-                    const float *SNN_RESTRICT row_w = w_ptr + offset;
-
-                    float sum = 0.0f;
-
-#pragma clang loop unroll_count(8)
-                    for (std::size_t k = 0; k < k_len; ++k)
-                    {
-                        sum += row_w[k] * spike_ptr[row_dst[k]];
-                    }
-
-                    buf_ptr[j] += sum;
-                    offset += c_ptr[j];
-                }
-            }
+                    cur_ptr[row_i[i]] += row_w[i];
+                } });
         }
 
-        [[nodiscard]] SynapseMode mode() const noexcept override { return mode_; }
         [[nodiscard]] std::size_t pre_size() const noexcept override { return pre_; }
         [[nodiscard]] std::size_t post_size() const noexcept override { return post_; }
 

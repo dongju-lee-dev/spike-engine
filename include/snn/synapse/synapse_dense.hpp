@@ -10,63 +10,35 @@ namespace snn
     class DenseSynapse : public Synapse
     {
     public:
-        SynapseMode mode_;
         std::size_t pre_;
         std::size_t post_;
         F32Buffer w_;
 
-        explicit DenseSynapse(SynapseMode mode, std::size_t pre, std::size_t post)
-            : mode_(mode),
-              pre_(pre),
+        explicit DenseSynapse(std::size_t pre, std::size_t post)
+            : pre_(pre),
               post_(post),
               w_(pre * post, 0.0f)
         {
         }
 
-        void step(const F32Buffer &pre_spikes, F32Buffer &post_current) override
+        void step(const BitBuffer &spike, F32Buffer &current) override
         {
-            float *SNN_RESTRICT buf_ptr = SNN_ASSUME_ALIGNED(post_current.data(), 64);
-            const float *SNN_RESTRICT spike_ptr = SNN_ASSUME_ALIGNED(pre_spikes.data(), 64);
+            float *SNN_RESTRICT cur_ptr = SNN_ASSUME_ALIGNED(current.data(), 64);
             const float *SNN_RESTRICT w_ptr = SNN_ASSUME_ALIGNED(w_.data(), 64);
 
-            const std::size_t n_pre = pre_;
             const std::size_t n_post = post_;
 
-            if (mode_ == SynapseMode::Front)
-            {
-                for (std::size_t i = 0; i < n_pre; ++i)
+            spike.for_each_true([&](const std::size_t index)
+                                {
+                const float *SNN_RESTRICT row_w = index * n_post + w_ptr;
+
+#pragma clang loop vectorize(enable)
+                for (std::size_t i = 0; i < n_post; ++i)
                 {
-                    if (spike_ptr[i] > 0.0f)
-                    {
-                        const float *SNN_RESTRICT row_w = w_ptr + (i * n_post);
-
-#pragma omp simd aligned(buf_ptr : 64)
-                        for (std::size_t j = 0; j < n_post; ++j)
-                        {
-                            buf_ptr[j] += row_w[j];
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for (std::size_t j = 0; j < n_post; ++j)
-                {
-                    const float *SNN_RESTRICT row_w = w_ptr + (j * n_pre);
-                    float sum = 0.0f;
-
-#pragma omp simd reduction(+ : sum) aligned(spike_ptr : 64)
-                    for (std::size_t i = 0; i < n_pre; ++i)
-                    {
-                        sum += row_w[i] * spike_ptr[i];
-                    }
-
-                    buf_ptr[j] += sum;
-                }
-            }
+                    cur_ptr[i] += row_w[i];
+                } });
         }
 
-        [[nodiscard]] SynapseMode mode() const noexcept override { return mode_; }
         [[nodiscard]] std::size_t pre_size() const noexcept override { return pre_; }
         [[nodiscard]] std::size_t post_size() const noexcept override { return post_; }
 
