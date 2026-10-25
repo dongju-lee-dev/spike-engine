@@ -11,6 +11,6 @@ namespace snn
     public:
         virtual ~Decoder() = default;
 
-        virtual std::any decode(const std::vector<F32Buffer> &row_output) = 0;
+        virtual std::any decode(const std::vector<BitBuffer> &row_output) = 0;
     };
 }

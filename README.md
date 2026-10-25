@@ -14,7 +14,7 @@
       • Poisson Rate Encoder: 실수값([0.0, 1.0])을 확률적 스파이크(0.0f / 1.0f)로 실시간 변환.
       • Direct/Current Encoder: 실수값을 입력 전류 벡터로 직접 주입.  
       • Spike Rate Decoder: 출력 뉴런들의 누적 스파이크 횟수 집계 및 최대 발화 클래스 판별.  
-  [ ] 엔진 오케스트레이터 (engine.hpp):  
+  [o] 엔진 오케스트레이터 (engine.hpp):  
       • Network와 LearningRule 목록을 소유.  
       • tick(input, reward, enable_learning = true): 추론/학습 제어.  
       • run(time_steps, ...): 다중 틱 연속 실행 제어.  
