@@ -43,23 +43,24 @@ namespace snn
     inline void connect_uniform_ratio(SparseSynapse &syn, float ratio)
     {
         const std::size_t nf = syn.pre_size();
-        const std::size_t nb = syn.pre_size();
-        const std::size_t k = std::clamp(static_cast<std::size_t>(std::round(nf * ratio)), std::size_t{1}, nf);
+        const std::size_t nb = syn.post_size();
+        const std::size_t k = std::clamp(static_cast<std::size_t>(std::round(nb * ratio)), std::size_t{1}, nb);
 
-        syn.c_.clear();
+        syn.o_.clear();
         syn.i_.clear();
         syn.w_.clear();
 
-        syn.c_.resize(nf);
+        syn.o_.resize(nf + 1);
+        syn.o_[0] = 0;
         syn.i_.reserve(nf * k);
         syn.w_.reserve(nf * k);
 
-        const double step = static_cast<double>(nf) / static_cast<double>(k);
+        const double step = static_cast<double>(nb) / static_cast<double>(k);
         const double phi = step / static_cast<double>(nb);
 
         for (std::size_t j = 0; j < nf; ++j)
         {
-            syn.c_[j] = k;
+            syn.o_[j + 1] = syn.o_[j] + k;
 
             for (std::size_t idx = 0; idx < k; ++idx)
             {
@@ -69,19 +70,24 @@ namespace snn
                 syn.w_.push_back(0.0f);
             }
         }
+
+        syn.o_.shrink_to_fit();
+        syn.i_.shrink_to_fit();
+        syn.w_.shrink_to_fit();
     }
 
     inline void connect_random_ratio(SparseSynapse &syn, float ratio, std::mt19937::result_type seed = 42)
     {
         const std::size_t nf = syn.pre_size();
-        const std::size_t nb = syn.pre_size();
+        const std::size_t nb = syn.post_size();
         const std::size_t k = std::clamp(static_cast<std::size_t>(std::round(nb * ratio)), std::size_t{1}, nb);
 
-        syn.c_.clear();
+        syn.o_.clear();
         syn.i_.clear();
         syn.w_.clear();
 
-        syn.c_.resize(nf);
+        syn.o_.resize(nf + 1);
+        syn.o_[0] = 0;
         syn.i_.reserve(nf * k);
         syn.w_.reserve(nf * k);
 
@@ -94,7 +100,7 @@ namespace snn
 
         for (std::size_t j = 0; j < nf; ++j)
         {
-            syn.c_[j] = k;
+            syn.o_[j + 1] = syn.o_[j] + k;
 
             std::shuffle(indices.begin(), indices.end(), gen);
 
@@ -105,7 +111,7 @@ namespace snn
             }
         }
 
-        syn.c_.shrink_to_fit();
+        syn.o_.shrink_to_fit();
         syn.i_.shrink_to_fit();
         syn.w_.shrink_to_fit();
     }
@@ -113,13 +119,14 @@ namespace snn
     inline void connect_random(SparseSynapse &syn, std::mt19937::result_type seed = 42)
     {
         const std::size_t nf = syn.pre_size();
-        const std::size_t nb = syn.pre_size();
+        const std::size_t nb = syn.post_size();
 
-        syn.c_.clear();
+        syn.o_.clear();
         syn.i_.clear();
         syn.w_.clear();
 
-        syn.c_.resize(nf);
+        syn.o_.resize(nf + 1);
+        syn.o_[0] = 0;
 
         std::mt19937 gen(seed);
         std::uniform_int_distribution<std::size_t> count_dist(1, nb);
@@ -135,7 +142,7 @@ namespace snn
         for (std::size_t j = 0; j < nf; ++j)
         {
             std::size_t k = count_dist(gen);
-            syn.c_[j] = k;
+            syn.o_[j + 1] = syn.o_[j] + k;
 
             std::shuffle(indices.begin(), indices.end(), gen);
 
@@ -146,7 +153,7 @@ namespace snn
             }
         }
 
-        syn.c_.shrink_to_fit();
+        syn.o_.shrink_to_fit();
         syn.i_.shrink_to_fit();
         syn.w_.shrink_to_fit();
     }
@@ -154,14 +161,15 @@ namespace snn
     inline void connect_gaussian(SparseSynapse &syn, float sigma, float ratio = 0.3f, std::mt19937::result_type seed = 42)
     {
         const std::size_t n_src = syn.pre_size();
-        const std::size_t n_pool = syn.pre_size();
+        const std::size_t n_pool = syn.post_size();
         const std::size_t k = std::clamp(static_cast<std::size_t>(std::round(n_pool * ratio)), std::size_t{1}, n_pool);
 
-        syn.c_.clear();
+        syn.o_.clear();
         syn.i_.clear();
         syn.w_.clear();
 
-        syn.c_.resize(n_src);
+        syn.o_.resize(n_src + 1);
+        syn.o_[0] = 0;
         syn.i_.reserve(n_src * k);
         syn.w_.reserve(n_src * k);
 
@@ -173,7 +181,7 @@ namespace snn
 
         for (std::size_t i = 0; i < n_src; ++i)
         {
-            syn.c_[i] = k;
+            syn.o_[i + 1] = syn.o_[i] + k;
 
             const float center = (static_cast<float>(i) + 0.5f) * (static_cast<float>(n_pool) / static_cast<float>(n_src));
 
@@ -242,7 +250,7 @@ namespace snn
             }
         }
 
-        syn.c_.shrink_to_fit();
+        syn.o_.shrink_to_fit();
         syn.i_.shrink_to_fit();
         syn.w_.shrink_to_fit();
     }

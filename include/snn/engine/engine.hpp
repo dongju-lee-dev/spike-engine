@@ -38,8 +38,6 @@ namespace snn
               network_(std::move(network)),
               learning_rules_(std::move(learning_rules))
         {
-            network_->init();
-
             unsigned int n = std::thread::hardware_concurrency();
 
             std::cout << "cores : " << n << '\n'
@@ -48,25 +46,7 @@ namespace snn
 
         ~Engine() = default;
 
-    private:
-        bool run_network()
-        {
-            for (const auto &n : network_->neu_)
-            {
-                for (const auto &d : n.spike.data_)
-                {
-                    if (d != 0ULL)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-    public:
-        void run(std::size_t epoch)
+        void run(const std::size_t epoch, const std::size_t max_tick = 50)
         {
             auto start_time = std::chrono::steady_clock::now();
 
@@ -96,9 +76,9 @@ namespace snn
                     const std::size_t input_len = input_data.size();
                     std::vector<BitBuffer> output_data;
 
-                    for (std::size_t tick = 0; run_network(); ++tick)
+                    for (std::size_t tick = 0; tick < max_tick; ++tick)
                     {
-                        output_data.push_back(BitBuffer(input_len, false));
+                        output_data.push_back(BitBuffer());
 
                         network_->step(tick < input_len ? input_data[tick] : F32Buffer(), output_data.back());
 

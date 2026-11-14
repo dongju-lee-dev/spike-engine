@@ -144,7 +144,7 @@ namespace snn
                 const std::size_t base_idx = w * 64;
                 while (word != 0ULL)
                 {
-                    const std::uint32_t b = std::countr_zero(word);
+                    const std::uint64_t b = std::countr_zero(word);
                     func(base_idx + b);
                     word &= (word - 1ULL);
                 }

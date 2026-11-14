@@ -39,6 +39,28 @@ namespace snn
                 } });
         }
 
+        void for_each_post_impl(std::size_t pre_id, SynapseCallback cb) override
+        {
+            const std::size_t base_w_idx = pre_id * post_;
+            const std::size_t n_post = post_;
+
+            for (std::size_t post_id = 0; post_id < n_post; ++post_id)
+            {
+                cb(post_id, base_w_idx + post_id);
+            }
+        }
+
+        void for_each_pre_impl(std::size_t post_id, SynapseCallback cb) override
+        {
+            const std::size_t n_pre = pre_;
+            const std::size_t stride = post_;
+
+            for (std::size_t pre_id = 0; pre_id < n_pre; ++pre_id)
+            {
+                cb(pre_id, pre_id * stride + post_id);
+            }
+        }
+
         [[nodiscard]] std::size_t pre_size() const noexcept override { return pre_; }
         [[nodiscard]] std::size_t post_size() const noexcept override { return post_; }
 

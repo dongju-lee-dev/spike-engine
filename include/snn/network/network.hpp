@@ -14,56 +14,45 @@ namespace snn
     class Network
     {
     public:
-        struct NeuronBox
+        std::vector<std::unique_ptr<NeuronContext>> neu_context_;
+        std::vector<std::unique_ptr<SynapseContext>> syn_context_;
+
+        explicit Network() = default;
+        ~Network() = default;
+
+        std::size_t add_neuron(std::unique_ptr<NeuronContext> neuron_context)
         {
-            std::unique_ptr<Neuron> neu;
-            F32Buffer current;
-            BitBuffer spike;
-        };
-
-        struct SynapseBox
-        {
-            std::unique_ptr<Synapse> syn;
-            std::size_t pre_id;
-            std::size_t post_id;
-        };
-
-        std::vector<NeuronBox> neu_;
-        std::vector<SynapseBox> syn_;
-
-        Network() = default;
-
-        std::size_t add_neuron(std::unique_ptr<Neuron> neuron)
-        {
-            const std::size_t sz = neuron->size();
-            neu_.push_back(NeuronBox{
-                .neu = std::move(neuron),
-                .current = F32Buffer(sz, 0.0f),
-                .spike = BitBuffer(sz, false),
-            });
-            return neu_.size() - 1;
+            neu_context_.push_back(std::move(neuron_context));
+            return neu_context_.size() - 1;
         }
 
-        std::size_t add_synapse(std::unique_ptr<Synapse> &synapse, std::size_t pre_id, std::size_t post_id)
+        std::size_t add_synapse(std::unique_ptr<SynapseContext> synapse_context)
         {
-            syn_.push_back(SynapseBox{
-                .syn = std::move(synapse),
-                .pre_id = pre_id,
-                .post_id = post_id,
-            });
-            return syn_.size() - 1;
+            syn_context_.push_back(std::move(synapse_context));
+            return syn_context_.size() - 1;
         }
 
         void init()
         {
-            neu_.shrink_to_fit();
-            syn_.shrink_to_fit();
+            neu_context_.shrink_to_fit();
+            syn_context_.shrink_to_fit();
 
-            for (const auto &s : syn_)
+            for (const auto &s : syn_context_)
             {
-                if (s.syn->pre_size() != neu_[s.pre_id].neu->size() || s.syn->post_size() != neu_[s.post_id].neu->size())
+                if (s->pre_id >= neu_context_.size() || s->post_id >= neu_context_.size())
                 {
-                    std::cerr << "ERROR : The sizes do not match.\n (pre neuron size : " << neu_[s.pre_id].neu->size() << ", post neuron size : " << neu_[s.post_id].neu->size() << ")\n";
+                    std::cerr << "ERROR: Invalid neuron ID in synapse context.\n";
+                    std::exit(EXIT_FAILURE);
+                }
+
+                const std::size_t pre_size = neu_context_[s->pre_id]->neuron->size();
+                const std::size_t post_size = neu_context_[s->post_id]->neuron->size();
+
+                if (s->synapse->pre_size() != pre_size || s->synapse->post_size() != post_size)
+                {
+                    std::cerr << "ERROR: Synapse and Neuron size mismatch.\n"
+                              << "Expected pre: " << pre_size << ", got: " << s->synapse->pre_size() << "\n"
+                              << "Expected post: " << post_size << ", got: " << s->synapse->post_size() << "\n";
                     std::exit(EXIT_FAILURE);
                 }
             }
@@ -71,9 +60,11 @@ namespace snn
 
         void reset()
         {
-            for (const auto &n : neu_)
+            for (const auto &n : neu_context_)
             {
-                n.neu->reset();
+                n->neuron->reset();
+                n->current.clear();
+                n->spike.clear();
             }
         }
 
@@ -81,60 +72,55 @@ namespace snn
         {
             if (!input.empty())
             {
-                float *SNN_RESTRICT cur_ptr = neu_[0].current.data();
-                const float *SNN_RESTRICT in_ptr = input.data();
-                const std::size_t len = std::min(neu_[0].current.size(), input.size());
+                float *SNN_RESTRICT cur_ptr = SNN_ASSUME_ALIGNED(neu_context_[0]->current.data(), 64);
+                const float *SNN_RESTRICT inp_ptr = SNN_ASSUME_ALIGNED(input.data(), 64);
 
-#pragma omp simd aligned(cur_ptr, in_ptr : 64)
+                const std::size_t len = input.size();
+
+#pragma omp simd aligned(cur_ptr, inp_ptr : 64)
                 for (std::size_t i = 0; i < len; ++i)
                 {
-                    cur_ptr[i] += in_ptr[i];
+                    cur_ptr[i] += inp_ptr[i];
                 }
             }
 
-            for (auto &s : syn_)
+            for (auto &s : syn_context_)
             {
-                s.syn->step(neu_[s.pre_id].spike, neu_[s.post_id].current);
+                s->synapse->step(neu_context_[s->pre_id]->spike, neu_context_[s->post_id]->current);
             }
 
-            for (auto &n : neu_)
+            for (auto &n : neu_context_)
             {
-                n.neu->step(n.current, n.spike);
-                std::fill(n.current.begin(), n.current.end(), 0.0f);
+                n->neuron->step(n->current, n->spike);
+                std::fill(n->current.begin(), n->current.end(), 0.0f);
             }
 
-            if (!output.empty())
+            output.copy_from(neu_context_.back()->spike);
+        }
+
+        [[nodiscard]] bool is_active() const noexcept
+        {
+            for (const auto &n : neu_context_)
             {
-                output.copy_from(neu_.back().spike);
+                for (const auto &d : n->spike.data_)
+                {
+                    if (d != 0ULL)
+                    {
+                        return true;
+                    }
+                }
             }
+            return false;
         }
 
-        [[nodiscard]] NeuronBox &neuron_box(std::size_t id)
+        [[nodiscard]] NeuronContext &get_neuron_context(std::size_t id)
         {
-            if (id >= neu_.size())
-                throw std::out_of_range("Invalid neuron box ID");
-            return neu_[id];
+            return *neu_context_[id];
         }
 
-        [[nodiscard]] const NeuronBox &neuron_box(std::size_t id) const
+        [[nodiscard]] SynapseContext &get_synapse_context(std::size_t id)
         {
-            if (id >= neu_.size())
-                throw std::out_of_range("Invalid neuron box ID");
-            return neu_[id];
-        }
-
-        [[nodiscard]] SynapseBox &synapse_box(std::size_t id)
-        {
-            if (id >= syn_.size())
-                throw std::out_of_range("Invalid synapse box ID");
-            return syn_[id];
-        }
-
-        [[nodiscard]] const SynapseBox &synapse_box(std::size_t id) const
-        {
-            if (id >= syn_.size())
-                throw std::out_of_range("Invalid synapse box ID");
-            return syn_[id];
+            return *syn_context_[id];
         }
     };
 }
