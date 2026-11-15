@@ -76,11 +76,11 @@ namespace snn
                     const std::size_t input_len = input_data.size();
                     std::vector<BitBuffer> output_data;
 
-                    for (std::size_t tick = 0; tick < max_tick; ++tick)
+                    for (std::size_t tick = 1; tick < max_tick; ++tick)
                     {
                         output_data.push_back(BitBuffer());
 
-                        network_->step(tick < input_len ? input_data[tick] : F32Buffer(), output_data.back());
+                        network_->step(tick - 1 < input_len ? input_data[tick - 1] : F32Buffer(), output_data.back());
 
                         for (const auto &lr : learning_rules_)
                         {

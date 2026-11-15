@@ -76,6 +76,11 @@ namespace snn
 
     using IndexBuffer = std::vector<std::size_t, AlignedAllocator<std::size_t, 64>>;
 
+    using U8Buffer = std::vector<std::uint8_t, AlignedAllocator<std::uint8_t, 64>>;
+    using U16Buffer = std::vector<std::uint16_t, AlignedAllocator<std::uint16_t, 64>>;
+    using U32Buffer = std::vector<std::uint32_t, AlignedAllocator<std::uint32_t, 64>>;
+    using U64Buffer = std::vector<std::uint64_t, AlignedAllocator<std::uint64_t, 64>>;
+
     using F32Buffer = std::vector<float, AlignedAllocator<float, 64>>;
     using F64Buffer = std::vector<double, AlignedAllocator<double, 64>>;
 
